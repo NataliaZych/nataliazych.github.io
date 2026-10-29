@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kropka: wyniki testu AI</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* Layout: nagłówek z kontekstem, tabela pułapek, potem zakładki poziomów; wynik po prawej, uwagi po lewej */
+:root {
+  --bg:#f3f4f8; --surface:#ffffff; --fg:#1f2a44; --muted:#5a6380; --line:#d9dce6; --navy:#2e3f6e; --gold:#a87a1f;
+  --ok:#2e7d4f; --ok-bg:#e3f2e8; --warn:#9a5b00; --warn-bg:#fbeed2; --bad:#b4232a; --bad-bg:#f9e1e2;
+  --display:"Source Serif 4", Georgia, serif; --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#141a2a; --surface:#1c2438; --fg:#e7eaf3; --muted:#a7afc6; --line:#33405e; --navy:#9fb2e8; --gold:#e3b544;
+  --ok:#7fd3a0; --ok-bg:#1f3a2b; --warn:#f0c46a; --warn-bg:#3d3018; --bad:#f29a9f; --bad-bg:#432226; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --bg:#141a2a; --surface:#1c2438; --fg:#e7eaf3; --muted:#a7afc6; --line:#33405e; --navy:#9fb2e8; --gold:#e3b544;
+  --ok:#7fd3a0; --ok-bg:#1f3a2b; --warn:#f0c46a; --warn-bg:#3d3018; --bad:#f29a9f; --bad-bg:#432226; color-scheme:dark }
+body { background:var(--bg); color:var(--fg); font:16px/1.55 var(--body); }
+.wrap { max-width:1180px; margin:0 auto; padding-block:32px 64px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:flex; flex-direction:column; gap:28px; }
+.eyebrow { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:700; }
+h1 { font-family:var(--display); font-size:clamp(28px,4vw,40px); line-height:1.1; margin:6px 0 10px; color:var(--navy); text-wrap:balance; }
+.lead { max-width:70ch; color:var(--muted); margin:0; }
+.caveat { background:var(--warn-bg); border:1px solid var(--line); border-radius:10px; padding:14px 18px; max-width:90ch; }
+.caveat b { color:var(--warn); }
+h2 { font-family:var(--display); color:var(--navy); font-size:24px; margin:0 0 14px; }
+h3 { font-size:13px; letter-spacing:.08em; text-transform:uppercase; margin:0 0 8px; color:var(--muted); }
+.tablewrap { overflow-x:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+table.traps { border-collapse:collapse; width:100%; min-width:560px; font-variant-numeric:tabular-nums; }
+.traps th, .traps td { padding:10px 14px; border-bottom:1px solid var(--line); text-align:left; font-size:15px; }
+.traps thead th { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.traps tbody th { font-weight:600; }
+.pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap; }
+.pill.ok { background:var(--ok-bg); color:var(--ok); } .pill.uwaga { background:var(--warn-bg); color:var(--warn); } .pill.blad { background:var(--bad-bg); color:var(--bad); }
+.tabs { display:flex; gap:8px; flex-wrap:wrap; }
+.tab { display:flex; flex-direction:column; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--fg); text-decoration:none; font-weight:600; }
+.tab span { font-size:12px; color:var(--gold); letter-spacing:.08em; text-transform:uppercase; }
+.tab[aria-current="true"] { background:var(--navy); color:var(--surface); border-color:var(--navy); }
+.tab[aria-current="true"] span { color:var(--surface); opacity:.8; }
+.tab:focus-visible { outline:3px solid var(--gold); outline-offset:2px; }
+.grid { display:grid; grid-template-columns:minmax(0,340px) minmax(0,1fr); gap:20px; align-items:start; }
+@media (max-width:820px) { .grid { grid-template-columns:minmax(0,1fr); } }
+.side { display:flex; flex-direction:column; gap:14px; min-width:0; }
+.box { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+.notes ul { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:15px; }
+.prompt summary { cursor:pointer; font-weight:600; }
+.prompt pre { white-space:pre-wrap; font:13px/1.5 var(--body); margin:10px 0 0; color:var(--muted); }
+.out { background:var(--surface); border:1px solid var(--line); border-radius:12px; min-width:0; }
+.outhead { padding:10px 20px; border-bottom:1px solid var(--line); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+.md { padding:8px 24px 24px; max-width:78ch; }
+.md h1 { font-size:26px; } .md h2 { font-size:20px; margin-top:22px; } .md h3 { font-size:15px; text-transform:none; letter-spacing:0; color:var(--navy); margin-top:18px; }
+.md table { border-collapse:collapse; display:block; overflow-x:auto; font-size:14px; margin:10px 0; }
+.md th, .md td { border:1px solid var(--line); padding:6px 10px; vertical-align:top; }
+.md em { color:var(--muted); }
+.md hr { border:0; border-top:1px solid var(--line); margin:24px 0; }
+.panel[hidden] { display:none; }
+</style>
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}</style>
+</head><body>
+<div class="wrap">
+<p style="margin:0 0 16px"><a href="./" style="color:var(--navy);font-weight:600;text-decoration:none">← Wróć do materiałów</a></p>
+  <header>
+    <div class="eyebrow">Kongres Efektywnej Komunikacji · warsztat 27.10</div>
+    <h1>Regulamin „Kropka” na trzech poziomach</h1>
+    <p class="lead">Ten sam regulamin programu lojalnościowego i trzy prompty w darmowym ChatGPT bez logowania, każdy w nowym czacie. Niżej tabela pułapek i pełne wyniki.</p>
+  </header>
+  <div class="caveat"><b>Wniosek.</b> Poziom 1 zmienia sens w czterech miejscach, poziom 2 w jednym, poziom 3 w żadnym. Poziom 2 jest czytelniejszy, ale trzeba mu uwierzyć. Poziom 3 jest mniej ładny, ale da się go sprawdzić. Wyniki zmieniają się przy każdym uruchomieniu, więc na sali mogą wyjść inne błędy.</div>
+  <section aria-labelledby="h-traps">
+    <h2 id="h-traps">Pułapki: co przetrwało</h2>
+    <div class="tablewrap"><table class="traps">
+      <thead><tr><th scope="col">Pułapka</th><th scope="col">Poziom 1</th><th scope="col">Poziom 2</th><th scope="col">Poziom 3</th></tr></thead>
+      <tbody><tr><th scope='row'>Cztery warunki uczestnictwa (§ 2 ust. 1)</th><td><span class='pill blad'>zmienione</span></td><td><span class='pill uwaga'>do sprawdzenia</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Bezpłatna jest rejestracja (§ 2 ust. 2)</th><td><span class='pill blad'>zmienione</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>„Za każde pełne 10 zł” (§ 3 ust. 1)</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Wyłączenia: dostawa i karty podarunkowe</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Punkty wymienia się na bon (§ 4 ust. 1)</th><td><span class='pill blad'>zmienione</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Bon ważny 60 dni od wygenerowania</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Limit 50% wartości zakupu</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Zakaz przekazania „innemu Uczestnikowi”</th><td><span class='pill blad'>zmienione</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Wyjątek „chyba że…” przy gotówce</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>12 miesięcy od końca miesiąca naliczenia</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>„Co najmniej 30 dni” przed zakończeniem</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr><tr><th scope='row'>Ochrona praw nabytych przy zmianie</th><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td><td><span class='pill ok'>zachowane</span></td></tr></tbody></table></div>
+  </section>
+  <nav class="tabs" aria-label="Poziomy"><a class='tab' href='#gpt1' data-k='gpt1'><span>Poziom 1</span>Samo polecenie</a><a class='tab' href='#gpt2' data-k='gpt2'><span>Poziom 2</span>Prompt z granicami</a><a class='tab' href='#gpt3' data-k='gpt3'><span>Poziom 3</span>Master prompt ze strefami</a></nav>
+  
+<section class="panel" id="gpt1" aria-labelledby="h-gpt1">
+  <h2 id="h-gpt1">Poziom 1: Samo polecenie</h2>
+  <div class="grid">
+    <aside class="side">
+      <div class="box notes"><h3>Co widać</h3><ul><li>Darmowy ChatGPT bez logowania, nowy czat, 25.10.2026. Tak będą pracować uczestnicy.</li><li><b>§ 2 ust. 1:</b> zniknęły „wyłącznie”, „osoba fizyczna” i odesłanie do art. 22¹ k.c. Został sam „konsument”, bez definicji.</li><li><b>§ 2 ust. 2:</b> „Rejestracja jest bezpłatna” zmieniło się w „Udział w Programie jest bezpłatny”.</li><li><b>§ 4 ust. 1:</b> „punkty podlegają wymianie na bony” zmieniło się w „za każde 100 punktów Uczestnik otrzymuje bon”. Brzmi, jakby bon przychodził sam.</li><li><b>§ 4 ust. 3:</b> zakaz przekazania „innemu Uczestnikowi” stał się zakazem przekazania „innej osobie”. Zakres jest szerszy.</li><li>Liczby, terminy, wyłączenia i wyjątek „chyba że” przetrwały.</li></ul></div>
+      <details class="box prompt"><summary>Prompt użyty w tym teście</summary><pre>Uprość ten tekst.</pre></details>
+    </aside>
+    <article class="out"><div class="outhead">Wynik modelu</div><div class="md"><p>Poniżej uproszczona wersja regulaminu programu lojalnościowego „Kropka”. Zachowałem najważniejsze zasady, kwoty, terminy i prawa uczestników, używając prostszego i bardziej przystępnego języka.</p>
+<h1>REGULAMIN PROGRAMU LOJALNOŚCIOWEGO „KROPKA”</h1>
+<h2>§ 1. Informacje o programie</h2>
+<ol>
+<li>Regulamin określa zasady udziału w programie lojalnościowym „Kropka”, zwanym dalej „Programem”.</li>
+<li>Organizatorem Programu jest Dom i Ogród Lipka sp. z o.o. z siedzibą w Kalinowcu Śląskim, ul. Sosnowa 40, 41-999 Kalinowiec Śląski, zwana dalej „Organizatorem”.</li>
+<li>Program działa w sklepach stacjonarnych oraz sklepie internetowym Organizatora.</li>
+<li>Program rozpoczyna się 1 marca 2026 r. i trwa do odwołania. O jego zakończeniu Organizator poinformuje Uczestników co najmniej 30 dni wcześniej.</li>
+</ol>
+<h2>§ 2. Kto może dołączyć do Programu?</h2>
+<ol>
+<li>Uczestnikiem Programu może być osoba, która ukończyła 18 lat, ma pełną zdolność do czynności prawnych, jest konsumentem i zarejestrowała się w Programie.</li>
+<li>Udział w Programie jest bezpłatny. Rejestracji można dokonać:<ul>
+<li>w aplikacji mobilnej Organizatora,</li>
+<li>na stronie sklepu internetowego,</li>
+<li>w punkcie obsługi klienta sklepu stacjonarnego.</li>
+</ul>
+</li>
+<li>Każdy Uczestnik może mieć tylko jedno konto. Jeśli założy więcej kont, Organizator poinformuje go o tym i połączy konta w jedno, przenosząc wszystkie zgromadzone punkty.</li>
+</ol>
+<h2>§ 3. Jak zbierać punkty?</h2>
+<ol>
+<li>Za każde pełne 10 zł wydane na zakupy Uczestnik otrzymuje 1 punkt. Punkty naliczane są od kwoty faktycznie zapłaconej po rabatach. Nie obejmują kosztów dostawy ani zakupu kart podarunkowych.</li>
+<li>W sklepie stacjonarnym przed zapłatą należy pokazać kod z aplikacji mobilnej lub podać numer telefonu przypisany do konta. W sklepie internetowym punkty naliczają się automatycznie, jeśli Uczestnik jest zalogowany podczas składania zamówienia.</li>
+<li>Punkty pojawiają się na koncie:<ul>
+<li>do 3 dni od zakupu w sklepie stacjonarnym,</li>
+<li>do 3 dni od otrzymania zamówienia ze sklepu internetowego.</li>
+</ul>
+</li>
+<li>W przypadku zwrotu towaru lub odstąpienia od umowy punkty przyznane za ten zakup zostaną odjęte od konta.</li>
+</ol>
+<h2>§ 4. Jak wymieniać punkty?</h2>
+<ol>
+<li>Za każde 100 punktów Uczestnik otrzymuje bon rabatowy o wartości 10 zł. Bon można wykorzystać na kolejne zakupy w sklepach Organizatora w ciągu 60 dni od jego wygenerowania.</li>
+<li>Podczas jednego zakupu nie można łączyć kilku bonów rabatowych. Wartość bonu nie może przekroczyć 50% wartości zakupów, przy których jest wykorzystywany.</li>
+<li>Punktów i bonów nie można wymienić na gotówkę ani przekazać innej osobie. Wyjątkiem są sytuacje, w których Organizator wyraźnie dopuści taką możliwość w regulaminie akcji promocyjnej.</li>
+</ol>
+<h2>§ 5. Jak długo ważne są punkty?</h2>
+<ol>
+<li>Punkty są ważne przez 12 miesięcy od końca miesiąca, w którym zostały naliczone. Po tym czasie niewykorzystane punkty wygasają.</li>
+<li>Liczbę zgromadzonych punktów oraz termin ich wygaśnięcia można w każdej chwili sprawdzić w aplikacji mobilnej lub na koncie w sklepie internetowym.</li>
+</ol>
+<h2>§ 6. Rezygnacja i wykluczenie z Programu</h2>
+<ol>
+<li>Z udziału w Programie można zrezygnować w dowolnym momencie, usuwając konto w aplikacji mobilnej lub składając oświadczenie w punkcie obsługi klienta. W chwili skutecznej rezygnacji niewykorzystane punkty wygasają.</li>
+<li>Organizator może wykluczyć Uczestnika, który narusza Regulamin, w szczególności gdy zbiera punkty za zakupy dokonywane w celu dalszej odsprzedaży towarów. O wykluczeniu Organizator poinformuje Uczestnika e-mailem, podając jego przyczynę.</li>
+</ol>
+<h2>§ 7. Reklamacje</h2>
+<ol>
+<li>Reklamacje dotyczące Programu można składać:<ul>
+<li>e-mailem na adres Organizatora,</li>
+<li>pisemnie na adres siedziby Organizatora,</li>
+<li>w punkcie obsługi klienta dowolnego sklepu stacjonarnego.</li>
+</ul>
+</li>
+<li>Organizator rozpatruje reklamację w ciągu 14 dni od jej otrzymania. O wyniku informuje w taki sam sposób, w jaki reklamacja została złożona, chyba że Uczestnik wskaże inny sposób kontaktu.</li>
+</ol>
+<h2>§ 8. Zmiany Regulaminu</h2>
+<ol>
+<li>Organizator może zmienić Regulamin z ważnych powodów, np. w przypadku zmiany przepisów prawa, zasad naliczania lub wymiany punktów albo zakresu Programu.</li>
+<li>O zmianach Organizator poinformuje Uczestników e-mailem oraz w aplikacji mobilnej co najmniej 14 dni przed ich wejściem w życie. Zmiany nie naruszają praw nabytych wcześniej przez Uczestników, w tym prawa do wymiany zgromadzonych punktów.</li>
+<li>Jeśli Uczestnik nie akceptuje zmian, może zrezygnować z Programu przed dniem ich wejścia w życie.</li>
+</ol>
+<hr />
+<p>Uwaga: To uproszczenie językowe, a nie pełna weryfikacja prawna regulaminu. Przed publikacją warto sprawdzić zwłaszcza zasady wygasania punktów i bonów, wykluczania uczestników oraz zmiany regulaminu pod kątem zgodności z obowiązującymi przepisami.</p></div></article>
+  </div>
+</section>
+<section class="panel" id="gpt2" aria-labelledby="h-gpt2">
+  <h2 id="h-gpt2">Poziom 2: Prompt z granicami</h2>
+  <div class="grid">
+    <aside class="side">
+      <div class="box notes"><h3>Co widać</h3><ul><li>Wyraźnie lepiej niż poziom 1: wróciło odesłanie do art. 22¹ k.c., „rejestracja”, „wymiana” i „innemu Uczestnikowi”.</li><li><b>§ 2 ust. 1:</b> nadal zniknęły „wyłącznie” i „osoba fizyczna”, a „pełnoletnia” stała się „masz ukończone 18 lat”. Granice podane w jednym zdaniu nie wystarczyły.</li><li>Tekst jest naprawdę prostszy: zwrot „Ty”, listy, krótsze zdania.</li><li><b>W skrócie:</b> czytelniejszy, ale trzeba mu uwierzyć. Nie wiesz, co zmienił i dlaczego.</li></ul></div>
+      <details class="box prompt"><summary>Prompt użyty w tym teście</summary><pre>Uprość poniższy regulamin dla klientów sklepu, którzy nie mają wykształcenia prawniczego. Pisz prostym językiem, na poziomie B1, i zwracaj się do czytelnika per „Ty”. Zachowaj znaczenie. Nie zmieniaj liczb, kwot, terminów ani sposobu ich liczenia. Zachowaj wszystkie warunki i wyjątki. Nie usuwaj żadnego postanowienia i nie dodawaj nowych informacji.</pre></details>
+    </aside>
+    <article class="out"><div class="outhead">Wynik modelu</div><div class="md"><h1>REGULAMIN PROGRAMU LOJALNOŚCIOWEGO „KROPKA”</h1>
+<h2>§ 1. Postanowienia ogólne</h2>
+<ol>
+<li>Ten regulamin (dalej „Regulamin”) określa zasady udziału w programie lojalnościowym „Kropka” (dalej „Program”).</li>
+<li>Organizatorem Programu jest Dom i Ogród Lipka sp. z o.o. z siedzibą w Kalinowcu Śląskim, ul. Sosnowa 40, 41-999 Kalinowiec Śląski (dalej „Organizator”).</li>
+<li>Program działa w sklepach stacjonarnych Organizatora oraz w jego sklepie internetowym. Dalej oba rodzaje sklepów nazywamy łącznie „Sklepami”.</li>
+<li>Program trwa od dnia 1 marca 2026 r. do odwołania. Organizator poinformuje Cię o zakończeniu Programu co najmniej 30 dni przed dniem jego zakończenia.</li>
+</ol>
+<h2>§ 2. Uczestnicy</h2>
+<ol>
+<li>
+<p>Możesz uczestniczyć w Programie, jeśli:</p>
+<ul>
+<li>masz ukończone 18 lat;</li>
+<li>masz pełną zdolność do czynności prawnych;</li>
+<li>jesteś konsumentem w rozumieniu art. 22¹ Kodeksu cywilnego;</li>
+<li>zarejestrowałeś się w Programie.</li>
+</ul>
+<p>Osobę, która spełnia te warunki, nazywamy dalej „Uczestnikiem”.
+2. Rejestracja w Programie jest bezpłatna. Możesz zarejestrować się, wypełniając formularz w aplikacji mobilnej Organizatora, na stronie sklepu internetowego albo w punkcie obsługi klienta w Sklepie stacjonarnym.
+3. Możesz mieć tylko jedno konto w Programie. Jeśli założysz więcej niż jedno konto, Organizator najpierw Cię o tym poinformuje, a następnie połączy Twoje konta w jedno. Wszystkie zgromadzone punkty zostaną przeniesione na to konto.</p>
+</li>
+</ol>
+<h2>§ 3. Jak zbierać punkty</h2>
+<ol>
+<li>Za każde pełne 10 zł wydane na zakup towarów w Sklepach otrzymasz 1 punkt. Punkty naliczamy od kwoty, którą faktycznie zapłacisz po odjęciu rabatów. Do tej kwoty nie wliczamy kosztów dostawy ani zakupu kart podarunkowych.</li>
+<li>
+<p>Aby otrzymać punkty za zakupy w Sklepie stacjonarnym, przed dokonaniem płatności musisz pokazać kod wygenerowany w aplikacji mobilnej albo podać numer telefonu przypisany do Twojego konta.</p>
+<p>Jeśli robisz zakupy w sklepie internetowym, punkty naliczymy automatycznie, pod warunkiem że w chwili składania zamówienia jesteś zalogowany na swoje konto.
+3. Punkty pojawią się na Twoim koncie:
+- w ciągu 3 dni od dnia zakupu w Sklepie stacjonarnym;
+- w ciągu 3 dni od dnia doręczenia zamówienia złożonego w sklepie internetowym.
+4. Jeśli zwrócisz towar lub odstąpisz od umowy, odejmiemy z Twojego konta punkty naliczone za ten towar.</p>
+</li>
+</ol>
+<h2>§ 4. Jak wymieniać punkty</h2>
+<ol>
+<li>Możesz wymienić zgromadzone punkty na bony rabatowe według następującego przelicznika: 100 punktów daje Ci bon o wartości 10 zł. Bon możesz wykorzystać przy kolejnych zakupach w Sklepach w ciągu 60 dni od dnia jego wygenerowania.</li>
+<li>Podczas jednych zakupów nie możesz połączyć bonu z innymi bonami rabatowymi. Wartość bonu nie może być wyższa niż 50% wartości zakupów, przy których go wykorzystujesz.</li>
+<li>Nie możesz wymienić punktów ani bonów na gotówkę. Nie możesz też przekazać ich innemu Uczestnikowi. Wyjątek stanowi sytuacja, w której Organizator wyraźnie dopuści taką możliwość w regulaminie akcji promocyjnej ogłoszonej w ramach Programu.</li>
+</ol>
+<h2>§ 5. Ważność punktów</h2>
+<ol>
+<li>Punkty są ważne przez 12 miesięcy, licząc od końca miesiąca kalendarzowego, w którym zostały naliczone. Po upływie tego okresu niewykorzystane punkty tracą ważność.</li>
+<li>W każdej chwili możesz sprawdzić w aplikacji mobilnej lub na swoim koncie w sklepie internetowym, ile masz punktów i kiedy wygaśnie najbliższa pula punktów.</li>
+</ol>
+<h2>§ 6. Rezygnacja i wykluczenie z Programu</h2>
+<ol>
+<li>Możesz zrezygnować z udziału w Programie w dowolnym momencie. W tym celu usuń konto w aplikacji mobilnej albo złóż odpowiednie oświadczenie w punkcie obsługi klienta. Gdy Twoje oświadczenie o rezygnacji zostanie skutecznie złożone, niewykorzystane punkty tracą ważność.</li>
+<li>Organizator może wykluczyć Cię z Programu, jeśli naruszysz Regulamin. Dotyczy to w szczególności sytuacji, gdy zbierasz punkty za zakupy dokonane w celu dalszej odsprzedaży towarów. Organizator poinformuje Cię o wykluczeniu e-mailem i poda jego przyczynę.</li>
+</ol>
+<h2>§ 7. Reklamacje</h2>
+<ol>
+<li>Jeśli chcesz złożyć reklamację dotyczącą Programu, możesz:<ul>
+<li>wysłać ją na adres e-mail Organizatora;</li>
+<li>wysłać ją na piśmie na adres siedziby Organizatora;</li>
+<li>złożyć ją w punkcie obsługi klienta w dowolnym Sklepie stacjonarnym.</li>
+</ul>
+</li>
+<li>Organizator rozpatrzy reklamację w ciągu 14 dni od dnia jej otrzymania. Poinformuje Cię o wyniku w taki sam sposób, w jaki złożyłeś reklamację, chyba że wskażesz inny sposób otrzymania odpowiedzi.</li>
+</ol>
+<h2>§ 8. Zmiany Regulaminu</h2>
+<ol>
+<li>Organizator może zmienić Regulamin z ważnych przyczyn. Dotyczy to w szczególności sytuacji, gdy:<ul>
+<li>zmienią się przepisy prawa;</li>
+<li>zmienią się zasady naliczania lub wymiany punktów;</li>
+<li>zmieni się zakres Programu.</li>
+</ul>
+</li>
+<li>Organizator poinformuje Cię o zmianie Regulaminu e-mailem oraz w aplikacji mobilnej co najmniej 14 dni przed dniem, w którym zmiany zaczną obowiązywać. Zmiany nie naruszą praw, które uzyskałeś przed dniem ich wejścia w życie. Dotyczy to również prawa do wymiany punktów zgromadzonych przed tym dniem.</li>
+<li>Jeśli nie akceptujesz zmian Regulaminu, możesz zrezygnować z udziału w Programie przed dniem, w którym zmiany zaczną obowiązywać.</li>
+</ol></div></article>
+  </div>
+</section>
+<section class="panel" id="gpt3" aria-labelledby="h-gpt3">
+  <h2 id="h-gpt3">Poziom 3: Master prompt ze strefami</h2>
+  <div class="grid">
+    <aside class="side">
+      <div class="box notes"><h3>Co widać</h3><ul><li>§ 2 ust. 1 przepisany dosłownie, ze wszystkimi warunkami i słowem „wyłącznie”. Wszystkie pułapki przetrwały.</li><li>Czerwona strefa objęła konkretne elementy, a nie całe paragrafy, więc reszta zdań jest prostsza: „Punkty pojawią się na Twoim koncie”, listy, zwrot „Ty”.</li><li>Model sam ocenił ryzyko każdej z 15 zmian redakcyjnych i wskazał jedno miejsce do sprawdzenia: czy usunięcie konta w aplikacji to już skuteczna rezygnacja.</li><li>Zostało trochę prawniczych zwrotów („zwana dalej”, „Uczestnik pozostawał zalogowany”). Tu wchodzi człowiek.</li><li><b>W skrócie:</b> mniej ładny niż poziom 2, ale da się go sprawdzić. Widać, co jest w której strefie, co się zmieniło i z jakim ryzykiem.</li></ul></div>
+      <details class="box prompt"><summary>Prompt użyty w tym teście</summary><pre>ROLA
+Jesteś doświadczonym prawnikiem, który upraszcza teksty prawne i prawnicze zgodnie z zasadami plain legal language. Upraszczasz formę tekstu. Treść normy, czyli to, kto co musi, może albo czego nie może zrobić, zostaje bez zmian.
+
+DANE
+Odbiorca: klienci sklepu bez wykształcenia prawniczego
+Cel: zrozumienie zasad programu lojalnościowego
+Typ dokumentu: regulamin
+Poziom wiedzy prawniczej odbiorcy (1–5): 1
+
+SYSTEM STREF UPRASZCZANIA
+Zanim cokolwiek zmienisz, przypisz każdy fragment do jednej ze stref. Strefa czerwona to konkretne słowa i elementy, a nie całe paragrafy. Nie przypisuj całego zdania do strefy czerwonej tylko dlatego, że zawiera liczbę albo termin: chronisz ten element, a resztę zdania upraszczasz.
+CZERWONA, nie ruszaj: definicje i odesłania do przepisów, kwoty, liczby i terminy razem ze sposobem ich liczenia, słowa zawężające i wyjątki („wyłącznie”, „pełne”, „chyba że”, „z wyłączeniem”, „w szczególności”), każdy z warunków uczestnictwa, sankcje. Te elementy przepisz dosłownie.
+POMARAŃCZOWA, ostrożnie: zasady naliczania, ważności i wygaśnięcia punktów, reklamacje, zmiany regulaminu. Upraszczaj składnię i słownictwo wokół czerwonych elementów i opisz każdą zmianę.
+ŻÓŁTA, elastycznie: opis działania programu, rejestracja, konto.
+ZIELONA, śmiało: instrukcje krok po kroku i informacje praktyczne.
+
+ZASADY
+Krótkie zdania, jedna myśl w zdaniu. Strona czynna. Zwrot do czytelnika „Ty”.
+Nagłówki, listy i tabele tam, gdzie pomagają.
+Nie usuwaj żadnego postanowienia. Nie dodawaj informacji, których nie ma w tekście, ani zachęt marketingowych.
+Jeśli ryzyko zmiany sensu jest wysokie, zostaw oryginalne brzmienie i dopisz obok krótkie wyjaśnienie.
+
+PRZYKŁAD
+Przed: „Zgłoszenie reklamacji winno nastąpić niezwłocznie, nie później niż w terminie 14 dni od dnia stwierdzenia wady, z wyłączeniem wad ujawnionych po upływie okresu gwarancji.”
+Po: „Zgłoś reklamację od razu, najpóźniej w ciągu 14 dni od dnia, w którym zauważysz wadę. Nie dotyczy to wad, które ujawnią się po upływie okresu gwarancji.”
+Co zostało: termin 14 dni, początek jego biegu i wyjątek. Co się zmieniło: strona czynna, zwrot do czytelnika, podział na dwa zdania.
+
+FORMAT ODPOWIEDZI
+1. Tabela: fragment, strefa.
+2. Wersja uproszczona.
+3. Lista zmian w strefie czerwonej i pomarańczowej z uzasadnieniem.
+4. Ocena ryzyka każdej zmiany: niskie, średnie, wysokie.
+
+TEKST DO UPROSZCZENIA:
+[regulamin]</pre></details>
+    </aside>
+    <article class="out"><div class="outhead">Wynik modelu</div><div class="md"><p><em>Pełna odpowiedź ma cztery części: tabelę stref, wersję uproszczoną, dwie tabele zmian (elementy chronione w strefie czerwonej i zmiany redakcyjne w strefie pomarańczowej, z oceną ryzyka) oraz omówienie ryzyk. Poniżej wersja uproszczona i najważniejsze fragmenty analizy.</em></p>
+<h1>REGULAMIN PROGRAMU LOJALNOŚCIOWEGO „KROPKA”</h1>
+<h2>§ 1. Postanowienia ogólne</h2>
+<ol>
+<li>Ten Regulamin określa zasady uczestnictwa w programie lojalnościowym „Kropka”, zwanym dalej „Programem”.</li>
+<li>Organizatorem Programu jest Dom i Ogród Lipka sp. z o.o. z siedzibą w Kalinowcu Śląskim, ul. Sosnowa 40, 41-999 Kalinowiec Śląski, zwana dalej „Organizatorem”.</li>
+<li>Program działa w sklepach stacjonarnych Organizatora oraz w sklepie internetowym Organizatora. Sklepy stacjonarne i sklep internetowy są dalej łącznie zwane „Sklepami”.</li>
+<li>Program trwa od dnia 1 marca 2026 r. do odwołania. Organizator poinformuje Uczestników o zakończeniu Programu co najmniej 30 dni przed dniem jego zakończenia.</li>
+</ol>
+<h2>§ 2. Uczestnicy</h2>
+<ol>
+<li>Uczestnikiem Programu może być wyłącznie pełnoletnia osoba fizyczna posiadająca pełną zdolność do czynności prawnych, będąca konsumentem w rozumieniu art. 22¹ Kodeksu cywilnego, która zarejestrowała się w Programie, zwana dalej „Uczestnikiem”.</li>
+<li>Rejestracja w Programie jest bezpłatna. Aby się zarejestrować, wypełnij formularz:<ul>
+<li>w aplikacji mobilnej Organizatora,</li>
+<li>na stronie internetowej sklepu internetowego albo</li>
+<li>w punkcie obsługi klienta w Sklepie stacjonarnym.</li>
+</ul>
+</li>
+<li>Możesz mieć tylko jedno konto w Programie. Jeśli ta sama osoba założy więcej niż jedno konto, Organizator najpierw poinformuje Uczestnika, a następnie połączy te konta w jedno i przeniesie na nie wszystkie zgromadzone punkty.</li>
+</ol>
+<h2>§ 3. Jak zbierać punkty</h2>
+<ol>
+<li>Za każde pełne 10 zł wydane na zakup towarów w Sklepach otrzymujesz 1 punkt. Punkty nalicza się od kwoty faktycznie zapłaconej, po uwzględnieniu rabatów, z wyłączeniem kosztów dostawy oraz zakupu kart podarunkowych.</li>
+<li>
+<p>Aby otrzymać punkty za zakupy w Sklepie stacjonarnym, przed dokonaniem płatności okaż kod wygenerowany w aplikacji mobilnej albo podaj numer telefonu przypisany do konta.</p>
+<p>W przypadku zakupów w sklepie internetowym punkty naliczają się automatycznie, o ile w chwili składania zamówienia Uczestnik pozostawał zalogowany do konta.
+3. Punkty pojawią się na Twoim koncie:
+- w terminie 3 dni od dnia zakupu w Sklepie stacjonarnym albo
+- w ciągu 3 dni od dnia doręczenia zamówienia złożonego w sklepie internetowym.
+4. Jeśli zwrócisz towar lub odstąpisz od umowy, punkty naliczone za ten towar zostaną odjęte z Twojego konta.</p>
+</li>
+</ol>
+<h2>§ 4. Jak wymieniać punkty</h2>
+<ol>
+<li>
+<p>Możesz wymienić zgromadzone punkty na bony rabatowe według przelicznika: 100 punktów uprawnia do otrzymania bonu o wartości 10 zł.</p>
+<p>Bon możesz wykorzystać przy kolejnych zakupach w Sklepach w terminie 60 dni od dnia jego wygenerowania.
+2. Przy jednym zakupie nie możesz połączyć bonu z innymi bonami rabatowymi. Wartość bonu nie może przekroczyć 50% wartości zakupu, przy którym go wykorzystujesz.
+3. Nie możesz wymienić punktów ani bonów na gotówkę ani przenieść ich na innego Uczestnika, chyba że Organizator wyraźnie przewidzi taką możliwość w regulaminie akcji promocyjnej ogłoszonej w ramach Programu.</p>
+</li>
+</ol>
+<h2>§ 5. Ważność punktów</h2>
+<ol>
+<li>Punkty są ważne przez 12 miesięcy, licząc od końca miesiąca kalendarzowego, w którym zostały naliczone. Po upływie tego okresu niewykorzystane punkty wygasają.</li>
+<li>W każdej chwili możesz sprawdzić liczbę punktów i termin wygaśnięcia najbliższej puli punktów:<ul>
+<li>w aplikacji mobilnej albo</li>
+<li>na koncie w sklepie internetowym.</li>
+</ul>
+</li>
+</ol>
+<h2>§ 6. Rezygnacja i wykluczenie z Programu</h2>
+<ol>
+<li>
+<p>Możesz zrezygnować z udziału w Programie w każdym czasie. W tym celu usuń konto w aplikacji mobilnej albo złóż odpowiednie oświadczenie w punkcie obsługi klienta.</p>
+<p>Z chwilą skutecznego złożenia oświadczenia o rezygnacji wygasają niewykorzystane punkty.
+2. Organizator może wykluczyć Cię z Programu, jeżeli naruszasz postanowienia Regulaminu, w szczególności gdy zbierasz punkty za zakupy dokonane w celu dalszej odsprzedaży.</p>
+<p>O wykluczeniu Organizator poinformuje Cię wiadomością e-mail i poda przyczynę wykluczenia.</p>
+</li>
+</ol>
+<h2>§ 7. Reklamacje</h2>
+<ol>
+<li>Reklamację dotyczącą Programu możesz złożyć:<ul>
+<li>e-mailem na adres poczty elektronicznej Organizatora,</li>
+<li>pisemnie na adres siedziby Organizatora albo</li>
+<li>w punkcie obsługi klienta w każdym Sklepie stacjonarnym.</li>
+</ul>
+</li>
+<li>
+<p>Organizator rozpatruje reklamację w terminie 14 dni od dnia jej otrzymania.</p>
+<p>Organizator poinformuje Cię o sposobie rozpatrzenia reklamacji w taki sam sposób, w jaki ją złożyłeś, chyba że wskażesz inny sposób.</p>
+</li>
+</ol>
+<h2>§ 8. Zmiany Regulaminu</h2>
+<ol>
+<li>Organizator może zmienić Regulamin z ważnych przyczyn, w szczególności w przypadku zmiany przepisów prawa, zmiany zasad naliczania lub wymiany punktów albo zmiany zakresu Programu.</li>
+<li>
+<p>Organizator poinformuje Cię o zmianie Regulaminu wiadomością e-mail oraz w aplikacji mobilnej co najmniej 14 dni przed dniem wejścia zmian w życie.</p>
+<p>Zmiany nie naruszają praw nabytych przez Uczestników przed dniem ich wejścia w życie, w tym prawa do wymiany punktów zgromadzonych przed tym dniem.
+3. Jeśli nie akceptujesz zmian, możesz zrezygnować z udziału w Programie przed dniem ich wejścia w życie.</p>
+</li>
+</ol>
+<hr />
+<h2>Fragmenty analizy z tej samej odpowiedzi</h2>
+<p><strong>Strefa czerwona, elementy zachowane:</strong> warunki uczestnictwa razem ze słowem „wyłącznie”, odesłanie do art. 22¹ k.c., „każde pełne 10 zł”, wyłączenia, terminy 3, 14, 30 i 60 dni, limit 50%, wyjątek „chyba że” i ochrona praw nabytych. Ryzyko: niskie.</p>
+<p><strong>Strefa pomarańczowa:</strong> 15 zmian redakcyjnych, m.in. „Uwidocznienie punktów na koncie następuje” → „Punkty pojawią się na Twoim koncie”, „Bon nie łączy się z innymi bonami” → „Nie możesz połączyć bonu z innymi bonami”. Prawie wszystkie z ryzykiem niskim.</p>
+<p><strong>Ryzyko średnie, wskazane przez model:</strong> „usuń konto w aplikacji” może sugerować, że samo usunięcie konta zawsze oznacza skuteczną rezygnację. Model zaleca to potwierdzić, a w razie wątpliwości zostawić oryginalne brzmienie z objaśnieniem.</p></div></article>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+  var ids=['gpt1','gpt2','gpt3'];
+  function show(k){ if(ids.indexOf(k)<0) k='gpt1';
+    ids.forEach(function(i){ document.getElementById(i).hidden = (i!==k); });
+    document.querySelectorAll('.tab').forEach(function(t){ t.setAttribute('aria-current', t.dataset.k===k ? 'true':'false'); }); }
+  document.querySelectorAll('.tab').forEach(function(t){ t.addEventListener('click', function(e){ e.preventDefault(); show(t.dataset.k); try{history.replaceState(null,'','#'+t.dataset.k);}catch(_){} }); });
+  show((location.hash||'').slice(1));
+})();
+</script>
+
+</body></html>
